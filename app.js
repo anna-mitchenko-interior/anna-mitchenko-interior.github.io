@@ -13,60 +13,46 @@ navigation?.addEventListener('click', event => {
   toggle.querySelector('span').textContent = '+';
 });
 
-// One shared stage: the incoming step rises over the outgoing step as the page scrolls.
-// Without JavaScript or with reduced motion, the full readable list remains available.
+// Reference-inspired reading sequence: only the introduction is pinned.
+// The actual step cards scroll naturally, while their headings fill with ink.
 const processSection = document.querySelector('.process-section');
 if (processSection) {
   const track = processSection.querySelector('.process-track');
   const sticky = processSection.querySelector('.process-sticky');
   const steps = [...processSection.querySelectorAll('.step')];
   const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
-  let travel = 0, pinTop = 24, framePending = false;
+  let framePending = false;
   const clamp = value => Math.max(0, Math.min(1, value));
-  const ease = value => value * value * (3 - 2 * value);
   function paintSteps() {
     framePending = false;
     if (!processSection.classList.contains('process-enhanced')) return;
-    const progress = clamp((pinTop - track.getBoundingClientRect().top) / travel);
-    const position = progress * (steps.length - 1);
-    const current = Math.min(Math.floor(position), steps.length - 1);
-    const transition = current === steps.length - 1 ? 0 : ease(clamp((position - current - 0.58) / 0.42));
-    const accessibleStep = transition >= 0.5 ? Math.min(current + 1, steps.length - 1) : current;
+    let current = 0, nearest = Infinity;
     steps.forEach((step, index) => {
-      let opacity = 0, offset = 32;
-      if (index === current) { opacity = 1 - transition; offset = -12 * transition; }
-      if (index === current + 1 && transition > 0) { opacity = transition; offset = 32 * (1 - transition); }
-      step.style.opacity = String(opacity);
-      step.style.transform = `translate3d(0, ${offset}px, 0)`;
-      step.style.visibility = opacity === 0 ? 'hidden' : 'visible';
-      step.style.zIndex = String(index + 1);
-      step.setAttribute('aria-hidden', String(index !== accessibleStep));
+      const top = step.getBoundingClientRect().top;
+      const progress = clamp((innerHeight * 0.78 - top) / (innerHeight * 0.38));
+      step.style.setProperty('--step-fill', `${(1 - progress) * 100}%`);
+      step.style.setProperty('--step-copy-opacity', String(0.55 + 0.45 * progress));
+      const distance = Math.abs(top - innerHeight * 0.28);
+      if (distance < nearest) { nearest = distance; current = index; }
     });
-    processSection.dataset.activeStep = String(accessibleStep + 1);
+    processSection.dataset.activeStep = String(current + 1);
   }
   function schedulePaint() {
     if (!framePending) { framePending = true; requestAnimationFrame(paintSteps); }
   }
   function measureSteps() {
-    processSection.classList.toggle('process-enhanced', !motionPreference.matches);
+    const supported = CSS.supports('background-clip', 'text');
+    processSection.classList.toggle('process-enhanced', !motionPreference.matches && supported);
+    track.style.removeProperty('height');
+    steps.forEach(step => { step.style.cssText = ''; step.removeAttribute('aria-hidden'); });
     if (motionPreference.matches) {
-      track.style.removeProperty('height');
-      steps.forEach(step => { step.style.cssText = ''; step.removeAttribute('aria-hidden'); });
       delete processSection.dataset.activeStep;
       return;
     }
-    pinTop = Math.max(24, Math.min(120, innerHeight * 0.14));
-    // All the actual text must fit while pinned, including small landscape screens.
-    if (sticky.offsetHeight > innerHeight - pinTop - 24) pinTop = 24;
-    if (sticky.offsetHeight > innerHeight - 48) {
-      processSection.classList.remove('process-enhanced');
-      track.style.removeProperty('height');
-      steps.forEach(step => { step.style.cssText = ''; step.removeAttribute('aria-hidden'); });
-      return;
-    }
-    travel = Math.max(400, innerHeight * 0.7) * (steps.length - 1);
+    const intro = sticky.querySelector('.process-intro');
+    const pinTop = Math.max(24, Math.min(120, innerHeight * 0.12));
+    processSection.classList.toggle('process-can-pin', intro.offsetHeight < innerHeight - pinTop - 32);
     processSection.style.setProperty('--process-pin-top', `${pinTop}px`);
-    track.style.height = `${Math.ceil(sticky.offsetHeight + travel)}px`;
     paintSteps();
   }
   addEventListener('scroll', schedulePaint, { passive: true });
@@ -75,6 +61,35 @@ if (processSection) {
   document.fonts.ready.then(measureSteps);
   measureSteps();
 }
+
+// A restrained reading reveal inspired by the reference: grey type fills with ink,
+// thin rules draw across the grid, and portfolio photos reveal once on entry.
+const revealPreference = matchMedia('(prefers-reduced-motion: reduce)');
+function initEntranceMotion() {
+  if (!('IntersectionObserver' in window) || revealPreference.matches) return;
+  const titles = document.querySelectorAll('.manifesto h2, .portfolio-intro h2, .about-copy h2, .services-intro h2, .contact-copy h2');
+  const rules = document.querySelectorAll('.section-rule');
+  const photos = document.querySelectorAll('.project-main, .portrait');
+  if (CSS.supports('background-clip', 'text')) titles.forEach(title => title.classList.add('motion-title'));
+  rules.forEach(rule => rule.classList.add('motion-line'));
+  photos.forEach(photo => photo.classList.add('motion-photo'));
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-revealed');
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -5% 0px' });
+  document.querySelectorAll('.motion-title, .motion-line, .motion-photo').forEach(element => observer.observe(element));
+  document.documentElement.classList.add('motion-ready');
+  revealPreference.addEventListener('change', () => {
+    if (revealPreference.matches) {
+      observer.disconnect();
+      document.documentElement.classList.remove('motion-ready');
+    }
+  });
+}
+document.fonts.ready.then(initEntranceMotion);
 
 const dialog = document.querySelector('.gallery');
 let galleryPhotos = [], currentSlide = 0, galleryOpener;
