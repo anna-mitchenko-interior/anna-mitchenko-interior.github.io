@@ -13,6 +13,69 @@ navigation?.addEventListener('click', event => {
   toggle.querySelector('span').textContent = '+';
 });
 
+// One shared stage: the incoming step rises over the outgoing step as the page scrolls.
+// Without JavaScript or with reduced motion, the full readable list remains available.
+const processSection = document.querySelector('.process-section');
+if (processSection) {
+  const track = processSection.querySelector('.process-track');
+  const sticky = processSection.querySelector('.process-sticky');
+  const steps = [...processSection.querySelectorAll('.step')];
+  const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
+  let travel = 0, pinTop = 24, framePending = false;
+  const clamp = value => Math.max(0, Math.min(1, value));
+  const ease = value => value * value * (3 - 2 * value);
+  function paintSteps() {
+    framePending = false;
+    if (!processSection.classList.contains('process-enhanced')) return;
+    const progress = clamp((pinTop - track.getBoundingClientRect().top) / travel);
+    const position = progress * (steps.length - 1);
+    const current = Math.min(Math.floor(position), steps.length - 1);
+    const transition = current === steps.length - 1 ? 0 : ease(clamp((position - current - 0.58) / 0.42));
+    const accessibleStep = transition >= 0.5 ? Math.min(current + 1, steps.length - 1) : current;
+    steps.forEach((step, index) => {
+      let opacity = 0, offset = 32;
+      if (index === current) { opacity = 1 - transition; offset = -12 * transition; }
+      if (index === current + 1 && transition > 0) { opacity = transition; offset = 32 * (1 - transition); }
+      step.style.opacity = String(opacity);
+      step.style.transform = `translate3d(0, ${offset}px, 0)`;
+      step.style.visibility = opacity === 0 ? 'hidden' : 'visible';
+      step.style.zIndex = String(index + 1);
+      step.setAttribute('aria-hidden', String(index !== accessibleStep));
+    });
+    processSection.dataset.activeStep = String(accessibleStep + 1);
+  }
+  function schedulePaint() {
+    if (!framePending) { framePending = true; requestAnimationFrame(paintSteps); }
+  }
+  function measureSteps() {
+    processSection.classList.toggle('process-enhanced', !motionPreference.matches);
+    if (motionPreference.matches) {
+      track.style.removeProperty('height');
+      steps.forEach(step => { step.style.cssText = ''; step.removeAttribute('aria-hidden'); });
+      delete processSection.dataset.activeStep;
+      return;
+    }
+    pinTop = Math.max(24, Math.min(120, innerHeight * 0.14));
+    // All the actual text must fit while pinned, including small landscape screens.
+    if (sticky.offsetHeight > innerHeight - pinTop - 24) pinTop = 24;
+    if (sticky.offsetHeight > innerHeight - 48) {
+      processSection.classList.remove('process-enhanced');
+      track.style.removeProperty('height');
+      steps.forEach(step => { step.style.cssText = ''; step.removeAttribute('aria-hidden'); });
+      return;
+    }
+    travel = Math.max(400, innerHeight * 0.7) * (steps.length - 1);
+    processSection.style.setProperty('--process-pin-top', `${pinTop}px`);
+    track.style.height = `${Math.ceil(sticky.offsetHeight + travel)}px`;
+    paintSteps();
+  }
+  addEventListener('scroll', schedulePaint, { passive: true });
+  addEventListener('resize', measureSteps, { passive: true });
+  motionPreference.addEventListener('change', measureSteps);
+  document.fonts.ready.then(measureSteps);
+  measureSteps();
+}
+
 const dialog = document.querySelector('.gallery');
 let galleryPhotos = [], currentSlide = 0, galleryOpener;
 function showSlide(index) {
