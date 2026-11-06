@@ -13,83 +13,41 @@ navigation?.addEventListener('click', event => {
   toggle.querySelector('span').textContent = '+';
 });
 
-// Reference-inspired reading sequence: only the introduction is pinned.
-// The actual step cards scroll naturally, while their headings fill with ink.
+// Keep all content visible by default. Enhance only the process section.
 const processSection = document.querySelector('.process-section');
 if (processSection) {
-  const track = processSection.querySelector('.process-track');
-  const sticky = processSection.querySelector('.process-sticky');
+  const intro = processSection.querySelector('.process-intro');
   const steps = [...processSection.querySelectorAll('.step')];
+  const titles = [...processSection.querySelectorAll('.step-heading h3')];
   const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
   let framePending = false;
   const clamp = value => Math.max(0, Math.min(1, value));
   function paintSteps() {
     framePending = false;
     if (!processSection.classList.contains('process-enhanced')) return;
-    let current = 0, nearest = Infinity;
-    steps.forEach((step, index) => {
-      const top = step.getBoundingClientRect().top;
-      const progress = clamp((innerHeight * 0.78 - top) / (innerHeight * 0.38));
-      step.style.setProperty('--step-fill', `${(1 - progress) * 100}%`);
-      step.style.setProperty('--step-copy-opacity', String(0.55 + 0.45 * progress));
-      const distance = Math.abs(top - innerHeight * 0.28);
-      if (distance < nearest) { nearest = distance; current = index; }
+    titles.forEach(title => {
+      const rect = title.getBoundingClientRect();
+      const progress = clamp((innerHeight * 0.92 - rect.top) / (innerHeight * 0.74 + rect.height));
+      title.style.setProperty('--text-reveal', `${Math.round(progress * 1000) / 10}%`);
     });
-    processSection.dataset.activeStep = String(current + 1);
-  }
-  function schedulePaint() {
-    if (!framePending) { framePending = true; requestAnimationFrame(paintSteps); }
   }
   function measureSteps() {
-    const supported = CSS.supports('background-clip', 'text');
-    processSection.classList.toggle('process-enhanced', !motionPreference.matches && supported);
-    track.style.removeProperty('height');
-    steps.forEach(step => { step.style.cssText = ''; step.removeAttribute('aria-hidden'); });
-    if (motionPreference.matches) {
-      delete processSection.dataset.activeStep;
-      return;
-    }
-    const intro = sticky.querySelector('.process-intro');
-    const pinTop = Math.max(24, Math.min(120, innerHeight * 0.12));
+    processSection.classList.toggle('process-enhanced', !motionPreference.matches);
+    const pinTop = 40;
     processSection.classList.toggle('process-can-pin', intro.offsetHeight < innerHeight - pinTop - 32);
     processSection.style.setProperty('--process-pin-top', `${pinTop}px`);
+    processSection.style.setProperty('--process-tail', `${Math.max(0, intro.offsetHeight - steps.at(-1).offsetHeight)}px`);
+    titles.forEach(title => title.style.removeProperty('--text-reveal'));
     paintSteps();
   }
-  addEventListener('scroll', schedulePaint, { passive: true });
+  addEventListener('scroll', () => {
+    if (!framePending) { framePending = true; requestAnimationFrame(paintSteps); }
+  }, { passive: true });
   addEventListener('resize', measureSteps, { passive: true });
   motionPreference.addEventListener('change', measureSteps);
   document.fonts.ready.then(measureSteps);
   measureSteps();
 }
-
-// A restrained reading reveal inspired by the reference: grey type fills with ink,
-// thin rules draw across the grid, and portfolio photos reveal once on entry.
-const revealPreference = matchMedia('(prefers-reduced-motion: reduce)');
-function initEntranceMotion() {
-  if (!('IntersectionObserver' in window) || revealPreference.matches) return;
-  const titles = document.querySelectorAll('.manifesto h2, .portfolio-intro h2, .about-copy h2, .services-intro h2, .contact-copy h2');
-  const rules = document.querySelectorAll('.section-rule');
-  const photos = document.querySelectorAll('.project-main, .portrait');
-  if (CSS.supports('background-clip', 'text')) titles.forEach(title => title.classList.add('motion-title'));
-  rules.forEach(rule => rule.classList.add('motion-line'));
-  photos.forEach(photo => photo.classList.add('motion-photo'));
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
-      entry.target.classList.add('is-revealed');
-      observer.unobserve(entry.target);
-    });
-  }, { threshold: 0.12, rootMargin: '0px 0px -5% 0px' });
-  document.querySelectorAll('.motion-title, .motion-line, .motion-photo').forEach(element => observer.observe(element));
-  document.documentElement.classList.add('motion-ready');
-  revealPreference.addEventListener('change', () => {
-    if (revealPreference.matches) {
-      observer.disconnect();
-      document.documentElement.classList.remove('motion-ready');
-    }
-  });
-}
-document.fonts.ready.then(initEntranceMotion);
 
 const dialog = document.querySelector('.gallery');
 let galleryPhotos = [], currentSlide = 0, galleryOpener;

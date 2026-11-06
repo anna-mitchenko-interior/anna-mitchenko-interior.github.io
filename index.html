@@ -1,11 +1,20 @@
 <!doctype html>
 <html lang="ru"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+if (performance.getEntriesByType('navigation')[0]?.type === 'reload') {
+  if (location.hash) history.replaceState(history.state, '', location.pathname + location.search);
+  const resetScroll = () => window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  resetScroll();
+  addEventListener('pageshow', resetScroll, { once: true });
+}
+</script>
 <meta name="theme-color" content="#151515"><meta name="description" content="Анна Митченко — дизайнер жилых интерьеров в Москве и области. Современный и скандинавский стиль, планировка и дизайн-проект.">
 <meta property="og:title" content="Анна Митченко — дизайнер интерьеров"><meta property="og:description" content="Сначала — как вы живёте. Потом — интерьер."><meta property="og:type" content="website"><meta property="og:locale" content="ru_RU">
 <title>Анна Митченко — дизайнер интерьеров</title><link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preload" href="assets/golos-regular.ttf" as="font" type="font/ttf" crossorigin><link rel="preload" href="assets/golos-medium.ttf" as="font" type="font/ttf" crossorigin>
-<link rel="stylesheet" href="styles.css?v=5a022f93ee"><script src="app.js?v=2b64d7d925" defer></script>
+<link rel="stylesheet" href="styles.css?v=3971946d4a"><script src="app.js?v=c29cf10187" defer></script>
 </head><body>
 <a class="skip-link" href="#main">Перейти к содержанию</a>
 <header class="site-header dark"><div class="wrap header-row">
