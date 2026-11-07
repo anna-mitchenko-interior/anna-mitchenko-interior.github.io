@@ -20,3 +20,22 @@
 @media(min-width:641px){.process-can-pin .process-intro{position:sticky;top:var(--process-pin-top,120px)}.process-can-pin .steps{padding-bottom:var(--process-tail,0px)}}
 @media(max-width:640px){.process-enhanced .step{min-height:0;padding-bottom:20px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}.step-heading h3{background:none!important;-webkit-text-fill-color:currentColor!important}}
+/* Keep the desktop navigation centered independently of the wordmark width. */
+@media(min-width:1201px){
+ .header-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);column-gap:32px}
+ .signature{justify-self:start}
+ .navigation{margin:0;justify-self:center}
+ .header-cta{justify-self:end}
+}
+@media(min-width:641px) and (max-width:1200px){
+ .header-row{flex-wrap:nowrap;gap:24px}
+ .signature{flex:1 1 auto;min-width:0}
+ .navigation{flex:0 0 auto;margin:0;gap:24px}
+}
+@media(max-width:640px){
+ .header-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0}
+ .signature{min-width:0}
+ .menu-toggle{justify-self:end}
+ .navigation{grid-column:1 / -1;width:100%;margin:0}
+}
+

@@ -1,5 +1,19 @@
 const toggle = document.querySelector('.menu-toggle');
 const navigation = document.querySelector('.navigation');
+
+const backToTop = document.createElement('button');
+backToTop.type = 'button';
+backToTop.className = 'back-to-top';
+backToTop.setAttribute('aria-label', 'Вернуться в начало сайта');
+backToTop.title = 'Наверх';
+backToTop.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20V4M5 11l7-7 7 7" stroke="currentColor" stroke-width="1.5"/></svg>';
+backToTop.hidden = window.scrollY < 300;
+document.body.append(backToTop);
+window.addEventListener('scroll', () => { backToTop.hidden = window.scrollY < 300; }, { passive: true });
+backToTop.addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  document.querySelector('.signature')?.focus({ preventScroll: true });
+});
 toggle?.addEventListener('click', () => {
   const open = toggle.getAttribute('aria-expanded') !== 'true';
   toggle.setAttribute('aria-expanded', String(open));
